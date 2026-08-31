@@ -1,0 +1,65 @@
+# ── Root .gitignore (repo-wide) ──
+# Per-directory rules live in client/.gitignore and server/.gitignore.
+# This file covers cross-cutting concerns and things that slipped through.
+
+# OS junk
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Virtual environments (root-level)
+venv/
+.venv/
+env/
+ENV/
+
+# Python caches (belt-and-suspenders; server/.gitignore also covers these)
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment / secrets (never commit)
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Databases (local dev)
+*.sqlite3
+*.sqlite3-journal
+*.db
+
+# Generated media / uploads
+server/media/
+media/
+*.wav
+*.mp3
+*.mp4
+*.webm
+*.gif
+
+# ML models / datasets / eval artifacts (large, regenerable)
+# NOTE: server/models/*.caffemodel + *.prototxt are REQUIRED deps (speaker detection) — keep them tracked.
+server/eval/data/
+*.ckpt
+*.pt
+*.pth
+*.onnx
+
+# Local planning / scratch docs
+*.local.md
+plan.local.md
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
