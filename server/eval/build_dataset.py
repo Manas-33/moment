@@ -21,9 +21,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
-import tempfile
 
 import numpy as np
 import pandas as pd
@@ -35,6 +35,8 @@ import features as F  # noqa: E402
 WINDOW_SEC = 30.0   # candidate clip length
 STRIDE_SEC = 15.0   # overlap between windows
 MIN_WINDOWS = 4     # skip videos too short to yield a few windows
+CROWD_SLICE_SEC = 10.0   # AST input length for crowd-reaction detection
+CROWD_HOP_SEC = 10.0     # hop between crowd-reaction slices (non-overlapping)
 
 
 # ── YouTube: heatmap + audio ───────────────────────────────────────────────
@@ -102,8 +104,49 @@ def text_in_window(segs, t0: float, t1: float) -> str:
     return " ".join(p.strip() for p in parts)
 
 
+def crowd_track(y: np.ndarray, sr: int, dur: float) -> list[tuple]:
+    """Per-slice crowd-reaction scores across the whole video: [(start, end, score)]."""
+    track, s = [], 0.0
+    while s < dur:
+        e = min(s + CROWD_SLICE_SEC, dur)
+        a, b = int(s * sr), int(e * sr)
+        track.append((s, e, F.crowd_reaction_score(y[a:b])))
+        s += CROWD_HOP_SEC
+    return track
+
+
+def crowd_in_window(track: list[tuple], t0: float, t1: float) -> float:
+    """Max crowd-reaction over slices overlapping the window (laughter is bursty)."""
+    vals = [sc for (s, e, sc) in track if min(t1, e) - max(t0, s) > 0]
+    return max(vals) if vals else 0.0
+
+
+# ── audio + transcript cache (avoid re-download/transcribe on feature reruns) ─
+def get_audio_and_transcript(url: str, vid: str, cache_dir: str):
+    import soundfile as sf
+    os.makedirs(cache_dir, exist_ok=True)
+    wav = os.path.join(cache_dir, f"{vid}.wav")
+    if not os.path.exists(wav):
+        got = download_audio_16k(url, cache_dir)
+        if not got:
+            return None, None
+    y, sr = sf.read(wav, dtype="float32")  # already 16k mono (ffmpeg)
+    if y.ndim > 1:
+        y = y.mean(axis=1)
+
+    tj = os.path.join(cache_dir, f"{vid}.json")
+    if os.path.exists(tj):
+        with open(tj) as f:
+            segs = [tuple(x) for x in json.load(f)]
+    else:
+        segs = transcribe(wav)
+        with open(tj, "w") as f:
+            json.dump(segs, f)
+    return (y, sr), segs
+
+
 # ── Per-video processing ───────────────────────────────────────────────────
-def process_video(url: str, tmp_dir: str) -> list[dict]:
+def process_video(url: str, cache_dir: str) -> list[dict]:
     print(f"- {url}")
     info = fetch_info(url)
     if not info:
@@ -117,26 +160,25 @@ def process_video(url: str, tmp_dir: str) -> list[dict]:
         print(f"  skip: too short ({dur}s)")
         return []
 
-    wav = download_audio_16k(url, tmp_dir)
-    if not wav:
+    vid = info.get("id", "unknown")
+    audio, segs = get_audio_and_transcript(url, vid, cache_dir)
+    if audio is None:
         return []
+    y, sr = audio
 
-    import soundfile as sf
-    y, sr = sf.read(wav, dtype="float32")  # wav is already 16k mono (ffmpeg)
-    if y.ndim > 1:
-        y = y.mean(axis=1)
-    segs = transcribe(wav)
-    print(f"  dur={dur}s  transcript_segs={len(segs)}  extracting windows...")
+    track = crowd_track(y, sr, dur)
+    print(f"  dur={dur}s  transcript_segs={len(segs)}  "
+          f"crowd_slices={len(track)}  extracting windows...")
 
     rows = []
-    vid = info.get("id", "unknown")
     t0 = 0.0
     while t0 + WINDOW_SEC <= dur:
         t1 = t0 + WINDOW_SEC
         a, b = int(t0 * sr), int(t1 * sr)
         y_win = y[a:b]
         text = text_in_window(segs, t0, t1)
-        feats = F.extract_window_features(y_win, sr, y_win, text)
+        feats = F.extract_window_features(
+            y_win, sr, y_win, text, crowd_reaction=crowd_in_window(track, t0, t1))
         feats["label"] = heatmap_value(heatmap, t0, t1)
         feats["video_id"] = vid
         feats["t0"] = t0
@@ -153,6 +195,9 @@ def main():
     ap.add_argument("--urls", nargs="*", default=[])
     ap.add_argument("--urls-file")
     ap.add_argument("--out", default="server/eval/data/dataset.csv")
+    ap.add_argument("--cache-dir", default="server/eval/data/cache",
+                    help="persistent cache for 16k audio + transcript, so adding "
+                         "features later does not re-download/re-transcribe")
     args = ap.parse_args()
 
     urls = list(args.urls)
@@ -164,9 +209,8 @@ def main():
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     all_rows = []
-    with tempfile.TemporaryDirectory() as tmp:
-        for url in urls:
-            all_rows.extend(process_video(url, tmp))
+    for url in urls:
+        all_rows.extend(process_video(url, args.cache_dir))
 
     if not all_rows:
         print("\nNo rows produced (no videos with heatmap data?).")

@@ -32,7 +32,10 @@ AUDIO_FEATURES = [
 ]
 SPEECH_FEATURES = ["speech_arousal"]
 TEXT_FEATURES = ["text_intensity"]
-FEATURE_COLUMNS = AUDIO_FEATURES + SPEECH_FEATURES + TEXT_FEATURES
+# Crowd reaction (laughter/applause/cheering) from an AudioSet-tagged model.
+# Strong "audible event" signal that plain energy/emotion features miss.
+EVENT_FEATURES = ["crowd_reaction"]
+FEATURE_COLUMNS = AUDIO_FEATURES + SPEECH_FEATURES + TEXT_FEATURES + EVENT_FEATURES
 
 
 # ── Audio (librosa) ────────────────────────────────────────────────────────
@@ -135,11 +138,56 @@ def text_intensity(text: str) -> dict:
     return {"text_intensity": float(min(max(1.0 - neutral, 0.0), 1.0))}
 
 
+# ── Crowd reaction: laughter / applause / cheering (AudioSet AST) ───────────
+@functools.lru_cache(maxsize=1)
+def _audio_tag_pipeline():
+    from transformers import pipeline
+    return pipeline(
+        "audio-classification",
+        model="MIT/ast-finetuned-audioset-10-10-0.4593",
+        top_k=None,
+    )
+
+# AudioSet display-name substrings that count as a crowd reaction.
+_CROWD_KEYWORDS = (
+    "laugh", "giggle", "chuckle", "chortle", "snicker",
+    "applause", "clap", "cheer", "crowd", "whoop", "shout",
+)
+
+
+def crowd_reaction_score(y_slice_16k: np.ndarray) -> float:
+    """
+    Summed probability of laughter/applause/cheering/crowd classes for one audio
+    slice (16 kHz mono), in [0,1]. AST expects ~10 s clips, so callers slice.
+    """
+    if y_slice_16k.size < SER_SR // 2:
+        return 0.0
+    try:
+        preds = _audio_tag_pipeline()(
+            {"array": y_slice_16k.astype(np.float32), "sampling_rate": SER_SR}
+        )
+    except Exception:
+        return 0.0
+    score = sum(
+        p["score"] for p in preds
+        if any(k in p["label"].lower() for k in _CROWD_KEYWORDS)
+    )
+    return float(min(max(score, 0.0), 1.0))
+
+
 def extract_window_features(y_win: np.ndarray, sr: int,
-                            y_win_16k: np.ndarray, text: str) -> dict:
-    """All features for a single window, as a flat dict keyed by FEATURE_COLUMNS."""
+                            y_win_16k: np.ndarray, text: str,
+                            crowd_reaction: float = 0.0) -> dict:
+    """
+    All features for a single window, as a flat dict keyed by FEATURE_COLUMNS.
+
+    `crowd_reaction` is passed in (computed once per video from a sliced AST pass)
+    rather than recomputed here, because AST truncates to ~10 s and laughter can
+    fall anywhere in the window.
+    """
     feats = {}
     feats.update(audio_features(y_win, sr))
     feats.update(speech_arousal(y_win_16k))
     feats.update(text_intensity(text))
+    feats["crowd_reaction"] = float(crowd_reaction)
     return feats
