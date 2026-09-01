@@ -16,25 +16,37 @@ from __future__ import annotations
 import argparse
 import yt_dlp
 
-QUERIES = [
-    "Lex Fridman podcast clip",
-    "Diary of a CEO podcast",
-    "Huberman Lab podcast clip",
-    "startup founder interview podcast",
-    "podcast interview highlight",
-    "TED talk",
-    "Y Combinator interview",
-    "author interview podcast",
-    "science podcast interview",
-    "business podcast clip",
-]
+# Query presets by content style. "reaction" targets content whose most-replayed
+# moment is an AUDIBLE event (cheer/laugh/hype/excited commentary) that the audio
+# features can detect - unlike TED talks where replays are content-driven.
+STYLES = {
+    "podcast": [
+        "Lex Fridman podcast clip", "Diary of a CEO podcast",
+        "Huberman Lab podcast clip", "startup founder interview podcast",
+        "podcast interview highlight", "TED talk", "Y Combinator interview",
+        "author interview podcast", "science podcast interview", "business podcast clip",
+    ],
+    "reaction": [
+        "esports insane moment cast", "gaming clutch moment commentary",
+        "game awards reveal crowd reaction", "Nintendo direct reaction",
+        "crowd goes wild moment", "try not to laugh challenge",
+        "funniest twitch moments", "hype gaming moment",
+        "live reveal audience reaction", "speedrun world record reaction",
+        "sports commentary crazy finish", "esports crowd eruption",
+        "developers react speedrun", "funniest gaming moments compilation",
+        "unbelievable comeback reaction", "live crowd reaction surprise",
+        "twitch streamer funny rage", "boxing knockout crowd reaction",
+        "stand up comedy crowd laughing", "poker biggest moments reaction",
+    ],
+}
+QUERIES = STYLES["podcast"]  # overridden by --style at runtime
 
-# Keep durations manageable for a first run (download + transcribe + SER cost).
-MIN_DUR = 300      # 5 min
+# Keep durations manageable (download + transcribe + SER cost).
+MIN_DUR = 240      # 4 min
 MAX_DUR = 1500     # 25 min
 MIN_VIEWS = 200_000
-SEARCH_PER_QUERY = 12
-MAX_PROBES = 120
+SEARCH_PER_QUERY = 20
+MAX_PROBES = 400
 
 
 def search_candidates(query: str, n: int) -> list[dict]:
@@ -64,7 +76,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=10)
     ap.add_argument("--out", default="server/eval/urls.txt")
+    ap.add_argument("--style", choices=list(STYLES), default="podcast")
     args = ap.parse_args()
+
+    global QUERIES
+    QUERIES = STYLES[args.style]
+    print(f"Style: {args.style} ({len(QUERIES)} queries)")
 
     # 1-2. gather + pre-filter candidates across queries
     seen, candidates = set(), []
