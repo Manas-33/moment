@@ -84,3 +84,23 @@ export async function signInWithGoogle() {
 
   redirect(data.url);
 }
+
+export async function signInWithGithub() {
+  const supabase = createClient();
+  const { data, error } = await (await supabase).auth.signInWithOAuth({
+    provider: "github",
+    options: {
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
+    },
+  });
+
+  if (error) {
+    console.log(error);
+    redirect("/error");
+  }
+
+  redirect(data.url);
+}

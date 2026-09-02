@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { login } from "@/lib/auth-action"
 import SignInWithGoogleButton from "./SignInGoogleButton"
+import SignInWithGithubButton from "./SignInGithubButton"
 
 export function LoginForm({
   className,
@@ -54,6 +55,7 @@ export function LoginForm({
                 Login
               </Button>
               <SignInWithGoogleButton/>
+              <SignInWithGithubButton/>
             </div>
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
