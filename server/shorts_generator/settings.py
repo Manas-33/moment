@@ -157,6 +157,18 @@ SUPABASE_URL = os.getenv('SUPABASE_URL', '')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
 SUPABASE_TABLE = os.getenv('SUPABASE_TABLE', 'shorts')
 
+# Celery / Redis configuration
+# USE_CELERY enables the Celery worker path; when off (default), long jobs run in
+# a background thread so the project runs with zero extra services locally.
+USE_CELERY = os.getenv('USE_CELERY', '').lower() in ('1', 'true', 'yes')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', CELERY_BROKER_URL)
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 60 * 60          # hard kill a stuck video job after 1h
+CELERY_TASK_SOFT_TIME_LIMIT = 55 * 60
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 8     # recycle workers to release ML/ffmpeg memory
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
 # Logging Configuration
 LOGGING = {
     'version': 1,

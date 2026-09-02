@@ -3,6 +3,8 @@ import threading
 import re
 import requests
 from urllib.parse import urlparse
+from celery import shared_task
+from django.conf import settings
 from .models import VideoProcessing, LanguageDubbing
 from .utils import upload_to_cloudinary, update_supabase
 from Components.YoutubeDownloader import download_youtube_video
@@ -66,6 +68,7 @@ def extract_segments_for_clip(transcription_segments, clip_start, clip_end):
     
     return adjusted_segments
 
+@shared_task(name="shorts_api.process_video_task")
 def process_video_task(video_processing_id):
     """
     Process a video in a background thread
@@ -309,12 +312,16 @@ def process_video_task(video_processing_id):
 
 def start_processing_video(video_processing_id):
     """
-    Start a background thread to process the video
+    Kick off video processing. Uses the Celery worker when USE_CELERY is enabled;
+    otherwise falls back to a background thread so the project runs with no broker.
     """
+    if getattr(settings, "USE_CELERY", False):
+        process_video_task.delay(video_processing_id)
+        return None
     thread = threading.Thread(target=process_video_task, args=(video_processing_id,))
     thread.daemon = True
     thread.start()
-    return thread 
+    return thread
 
 def is_cloudinary_url(url):
     """
@@ -340,6 +347,7 @@ def download_from_cloudinary(url, output_path):
         print(f"Error downloading from Cloudinary: {e}")
         return None
 
+@shared_task(name="shorts_api.process_dubbing_task")
 def process_dubbing_task(dubbing_id):
     """
     Process a language dubbing task in a background thread
@@ -524,9 +532,13 @@ def process_dubbing_task(dubbing_id):
 
 def start_dubbing_process(dubbing_id):
     """
-    Start a background thread to process the language dubbing
+    Kick off dubbing. Uses the Celery worker when USE_CELERY is enabled; otherwise
+    falls back to a background thread so the project runs with no broker.
     """
+    if getattr(settings, "USE_CELERY", False):
+        process_dubbing_task.delay(dubbing_id)
+        return None
     thread = threading.Thread(target=process_dubbing_task, args=(dubbing_id,))
     thread.daemon = True
     thread.start()
-    return thread 
+    return thread
