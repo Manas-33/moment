@@ -1,126 +1,174 @@
-# Highlightr - AI-Powered Video Content Creator
+# Moment
 
-Transform your long-form videos and podcasts into engaging short clips using AI. Automatically generate captions, translate content, and create viral-ready content for social media.
+Moment turns a long video into short vertical clips. Give it a YouTube link or a
+file, and it finds the moments worth clipping, crops each one to 9:16 so the frame follows
+whoever is talking, and burns in captions. It can also dub the clips into another language.
 
-## Features
+It runs local-first. With just an Anthropic API key everything works on your machine.
+Cloudinary and Supabase are optional, for cloud storage and auth if you want them.
 
-- 🎥 **AI Video Processing**: Convert long videos into multiple short clips
-- 🗣️ **Language Dubbing**: Translate and dub videos in multiple languages
-- 📝 **Auto Captions**: Generate and customize captions automatically
-- ☁️ **Cloud Storage**: Integrated with Cloudinary for video hosting
-- 🔐 **User Authentication**: Secure login with Supabase Auth
-- 📱 **Responsive UI**: Modern, mobile-friendly interface
+## How it works
 
-## Tech Stack
+```mermaid
+flowchart LR
+    U[User] --> C[Next.js dashboard]
+    C -->|video URL or upload| W[Django API]
+    W -->|queue job| R[(Redis)]
+    R --> K[Celery worker]
+    W -.->|poll status| C
+    K -->|clips| DB[(DB + media)]
+    DB --> W
+```
 
-**Frontend:**
-- Next.js 15 with TypeScript
-- Tailwind CSS + shadcn/ui components
-- Supabase for authentication
-- Framer Motion for animations
+A request from the dashboard hits the Django API, which queues a job and returns right
+away. A Celery worker does the actual processing, so the API never blocks on a long video.
+If you would rather not run Redis, leave `USE_CELERY` off and the job runs in a background
+thread instead.
 
-**Backend:**
-- Django REST Framework
-- Anthropic Claude (Sonnet 4.6) for highlight extraction and translation
-- Deepgram Aura for text-to-speech
-- Faster-Whisper (local) for transcription
-- Local filesystem (or Cloudinary, optional) for video storage
-- SQLite (or Supabase, optional) for database
+Inside the worker each video goes through the same pipeline:
 
-## Quick Setup
+```mermaid
+flowchart TD
+    A[Download the source] --> B[Transcribe]
+    B --> C[Pick the best moments]
+    C --> D[Crop to 9:16 and follow the speaker]
+    D --> E[Add captions]
+    E --> F{Dub?}
+    F -->|yes| G[Translate and voice]
+    F -->|no| H[Export]
+    G --> H
+    H --> I[Store]
+```
 
-### Prerequisites
-- Node.js 18+ and npm
-- Python 3.10+ (3.12 recommended)
-- ffmpeg (`brew install ffmpeg` on macOS)
-- Anthropic API key (`ANTHROPIC_API_KEY`)
-- Deepgram API key (`DEEPGRAM_API_KEY`) — only required if you use the dubbing/translation flow
-- Cloudinary / Supabase accounts are *optional* — by default everything runs locally
+1. Transcribe the audio with faster-whisper.
+2. Ask Claude to read the transcript and return the best 30 to 60 second moments, ranked.
+3. Crop each moment to 9:16 and track the active speaker.
+4. Diarize the clip and burn in word-level captions, colored per speaker.
+5. Optionally translate the transcript with Claude and voice it with Deepgram, then export
+   with ffmpeg.
 
-### 1. Clone the Repository
+### Following the speaker
+
+The reframe is the part a language model cannot do, since it never sees the video. For each
+clip Moment runs a YuNet face detector and Silero voice-activity detection, measures how
+much each face's mouth is moving, and decides who is speaking. The 9:16 crop then pans to
+keep that person in frame. On a single-speaker clip it just tracks the one face; in an
+interview it follows the back-and-forth. If it cannot find a face it falls back to a
+center crop.
+
+### Picking moments
+
+Choosing which moments to clip is a language problem, so Claude does it from the transcript.
+Early on I built an ML model that scored clips from audio and text signals (speech emotion,
+energy, laughter) to try to do this instead, and checked it against YouTube's "most
+replayed" data. It did not beat Claude, so it stayed out of the pipeline. The experiment,
+including the dataset builder and the eval harness, is in `server/eval` if you want to read
+the numbers.
+
+## Running it
+
+You need an `ANTHROPIC_API_KEY`. `DEEPGRAM_API_KEY` is only needed for the dubbing flow.
+Speaker-colored captions use a gated `pyannote` model; without it, captions still render in
+a single highlight color.
+
+### With Docker
+
 ```bash
-git clone https://github.com/Manas-33/Highlightr.git
-cd Highlightr
+git clone https://github.com/Manas-33/Moment.git
+cd Moment
+# create server/.env with your keys (see the env block below)
+docker compose up --build
 ```
 
-### 2. Client Setup
-```bash
-cd client
-npm install
-```
+That brings up the API, a Celery worker, and Redis on `http://localhost:8000`. Run the
+client separately.
 
-No `.env.local` is required for local mode — the dashboard is the landing page (`http://localhost:3000`) and there is no login. If you later want Supabase auth back, add:
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+### Without Docker
 
-Start development server:
-```bash
-npm run dev
-```
+Server:
 
-### 3. Server Setup
 ```bash
 cd server
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate       # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 ```
 
-Create `server/.env`:
+Client:
+
+```bash
+cd client
+npm install
+npm run dev                    # http://localhost:3000
+```
+
+A minimal `server/.env`:
+
 ```env
-# Required
-ANTHROPIC_API_KEY=your_anthropic_api_key
+ANTHROPIC_API_KEY=your_key
+DEEPGRAM_API_KEY=your_key      # dubbing only
 
-# Required only for the dubbing/translation flow (text-to-speech)
-DEEPGRAM_API_KEY=your_deepgram_api_key
-
-# Optional — leave blank to keep everything local
+# optional, leave blank to stay local
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 SUPABASE_URL=
 SUPABASE_KEY=
 
-# Optional Django basics
+# leave USE_CELERY off to run jobs in a thread instead of on a worker
+USE_CELERY=
+CELERY_BROKER_URL=redis://localhost:6379/0
+
 DEBUG=True
 SECRET_KEY=any-string
-# Public origin used for local media URLs returned by the API
 PUBLIC_BASE_URL=http://localhost:8000
 ```
 
-Run migrations and start server:
+To run a worker locally you need Redis running, then:
+
 ```bash
-python manage.py migrate
-python manage.py runserver
+cd server
+celery -A shorts_generator worker --loglevel=info
 ```
 
-### 4. Database Setup (Optional - Supabase)
+## Stack
 
-For production or if you prefer Supabase over SQLite:
+Frontend is Next.js and TypeScript with Tailwind and shadcn/ui. Backend is Django REST
+Framework with Celery and Redis for the async jobs.
 
-1. Create tables in Supabase using the schema in `server/supabase_migrations/`
-2. Set `USE_SUPABASE=True` in your server `.env`
+The media and ML pieces:
 
+- Claude (Anthropic) for highlight detection and translation
+- faster-whisper for transcription
+- YuNet face detection, Silero VAD, and mouth-region motion for the speaker-following crop
+- pyannote for diarization, so captions can be colored by speaker
+- moviepy 2 and Pillow for caption rendering, ffmpeg for cutting and muxing
+- Deepgram for dubbing voices
 
-## Usage
+Storage is the local filesystem by default, or Cloudinary. The database is SQLite by
+default, or Supabase. There is a GitHub Actions workflow that runs the server tests and the
+client build, and OpenAPI docs are served at `/api/docs/`.
 
-1. Open `http://localhost:3000` — you land directly on the dashboard (no login).
-2. **Paste a YouTube URL** in the form.
-3. **Select number of clips** to generate.
-4. **Choose language** for dubbing (optional).
-5. Generated clips appear in the dashboard and are stored under `server/media/local/`.
+## Layout
 
+```
+client/                Next.js dashboard
+server/
+  shorts_api/          REST API, models, and the Celery tasks
+  shorts_generator/    Django project and Celery app
+  Components/          the pipeline: download, transcribe, highlight, crop, caption, dub
+  eval/                the engagement-scoring experiment (not wired into the pipeline)
+docker-compose.yml     redis, web, and worker
+```
 
-## Contributing
+## Tests
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+```bash
+cd server && python -m pytest
+```
 
 ## License
 
-MIT License - see LICENSE file for details.
- 
+MIT. See LICENSE.
