@@ -1,5 +1,5 @@
 """
-Celery application for Highlightr.
+Celery application for Moment.
 
 Long-running video jobs (transcription, LLM highlight detection, cropping,
 captioning, dubbing) run on a Celery worker backed by Redis instead of a raw
@@ -15,7 +15,7 @@ from celery import Celery
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "shorts_generator.settings")
 
-app = Celery("highlightr")
+app = Celery("moment")
 # All CELERY_* settings in Django settings.py configure the app.
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()

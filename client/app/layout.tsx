@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Highlightr",
+  title: "Moment",
   description: "Transform your podcasts into viral clips",
 };
 

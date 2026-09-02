@@ -97,7 +97,7 @@ export function AppSidebar({
             <Command className="size-4" />
           </div>
           <div className="grid text-left text-sm leading-tight">
-            <span className="truncate font-semibold">Highlightr</span>
+            <span className="truncate font-semibold">Moment</span>
             <span className="truncate text-xs">Shorts Generator</span>
           </div>
         </div>

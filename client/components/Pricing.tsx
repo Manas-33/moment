@@ -79,7 +79,7 @@ export default function Pricing() {
   const handleGetStarted = (planName: string) => {
     if (planName === "Enterprise") {
       // For enterprise, you might want to redirect to a contact form
-      window.open("mailto:sales@highlightr.com?subject=Enterprise Plan Inquiry", "_blank")
+      window.open("mailto:sales@moment.com?subject=Enterprise Plan Inquiry", "_blank")
     } else {
       router.push("/dashboard")
     }

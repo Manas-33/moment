@@ -63,7 +63,7 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Highlightr API',
+    'TITLE': 'Moment API',
     'DESCRIPTION': 'Turn long-form video into ranked short clips.',
     'VERSION': '1.0.0',
 }

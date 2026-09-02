@@ -35,7 +35,7 @@ export default function Footer() {
           <div className="mx-auto max-w-3xl space-y-8 text-center">
             <h2 className="text-3xl font-bold">Ready to Get Started?</h2>
             <p className="text-muted-foreground">
-            Join thousands of content creators who are already using Highlightr to grow their audience.
+            Join thousands of content creators who are already using Moment to grow their audience.
             </p>
             <div className="space-x-4">
               <Button size="lg">Start Free Trial</Button>

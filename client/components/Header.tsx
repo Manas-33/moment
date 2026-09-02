@@ -95,7 +95,7 @@ export default function Header() {
           <div className="flex items-center justify-center gap-2">
             <Wand2 className="h-6 w-6 text-primary" />
             <Link href="/" className="text-2xl font-bold text-primary">
-              Highlightr
+              Moment
             </Link>
           </div>
           <nav className="hidden md:flex space-x-10">

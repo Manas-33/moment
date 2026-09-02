@@ -1,4 +1,4 @@
-# Highlightr server image (Django web + Celery worker share this image).
+# Moment server image (Django web + Celery worker share this image).
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \

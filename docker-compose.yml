@@ -1,4 +1,4 @@
-# Highlightr local stack: Redis broker + Django web + Celery worker.
+# Moment local stack: Redis broker + Django web + Celery worker.
 # Web stays responsive while long video jobs run on the worker.
 #
 #   docker compose up --build
