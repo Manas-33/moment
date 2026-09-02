@@ -1,5 +1,4 @@
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from moviepy.editor import VideoFileClip
 import subprocess
 import os
 
@@ -41,7 +40,7 @@ def extractAudioDubbed(video_path, id):
 def crop_video(input_file, output_file, start_time, end_time):
     print("Cropping the video")
     with VideoFileClip(input_file) as video:
-        cropped_video = video.subclip(start_time, end_time)
+        cropped_video = video.subclipped(start_time, end_time)
         cropped_video.write_videofile(output_file, codec='libx264')
 
 # Example usage:

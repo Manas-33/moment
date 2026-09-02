@@ -1,4 +1,4 @@
-from moviepy.editor import TextClip, ImageClip, VideoClip, CompositeVideoClip
+from moviepy import TextClip, ImageClip, VideoClip, CompositeVideoClip
 from PIL import Image, ImageFilter, ImageFont
 import numpy
 import tempfile
@@ -28,9 +28,25 @@ class Word:
             char.set_color(color)
 
 class TextClipEx(TextClip):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.text = kwargs["txt"]
+    def __init__(self, txt=None, fontsize=None, font=None, color="black",
+                 bg_color="transparent", stroke_color=None, stroke_width=0,
+                 kerning=None, method="label", align=None, **kwargs):
+        # Translate the moviepy 1.x kwargs this project used to the 2.x TextClip API:
+        # txt->text, fontsize->font_size, bg 'transparent'->None, drop kerning/align,
+        # and only apply a stroke when a stroke color is given.
+        if bg_color == "transparent":
+            bg_color = None
+        super().__init__(
+            font=font,
+            text=txt,
+            font_size=fontsize,
+            color=color,
+            bg_color=bg_color,
+            stroke_color=stroke_color,
+            stroke_width=stroke_width if stroke_color else 0,
+            method="label",
+        )
+        self.text = txt
 
 def moviepy_to_pillow(clip) -> Image:
     temp_file = tempfile.NamedTemporaryFile(suffix=".png").name
@@ -63,7 +79,7 @@ def blur_text_clip(text_clip, blur_radius: int) -> VideoClip:
     )
 
     text_clip = ImageClip(numpy.array(pil_img_padded))
-    text_clip = text_clip.set_duration(text_clip.duration)
+    text_clip = text_clip.with_duration(text_clip.duration)
 
     return text_clip
 
@@ -88,7 +104,7 @@ def create_text(
 
     text_clip = TextClipEx(txt=text, fontsize=fontsize, color=color, bg_color=bg_color, font=font, stroke_color=stroke_color, stroke_width=stroke_width, kerning=kerning, method="caption", align="east")
 
-    text_clip = text_clip.set_opacity(opacity)
+    text_clip = text_clip.with_opacity(opacity)
 
     if blur_radius:
         text_clip = blur_text_clip(text_clip, blur_radius)
@@ -141,7 +157,7 @@ def create_composite_text(text_clips: list[VideoClip], font, font_size) -> Compo
 
     for clip in text_clips:
         clip.size = (int(full_width), clip.size[1])
-        clip = clip.set_position((int(offset_x), 0))
+        clip = clip.with_position((int(offset_x), 0))
         width = font.getlength(clip.text)
         offset_x += width * scale_factor
         clips.append(clip)
