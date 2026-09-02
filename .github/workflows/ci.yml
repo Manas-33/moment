@@ -73,6 +73,9 @@ jobs:
           fi
 
       - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: placeholder-anon-key
         run: |
           if npm run | grep -q "^  build"; then
             npm run build

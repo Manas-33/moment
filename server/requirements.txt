@@ -44,7 +44,7 @@ iniconfig==2.1.0
 Jinja2==3.1.5
 jiter==0.8.2
 MarkupSafe==3.0.2
-moviepy>=2.1,<3
+moviepy>=2.2.1,<3
 mpmath==1.3.0
 multidict==6.2.0
 networkx==3.4.2
@@ -54,7 +54,7 @@ anthropic
 deepgram-sdk
 opencv-contrib-python>=4.10,<5
 packaging==24.2
-pillow==11.1.0
+pillow>=9.2,<12
 pluggy==1.5.0
 postgrest==1.0.1
 proglog==0.1.10
