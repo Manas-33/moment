@@ -45,6 +45,19 @@ from Components.LanguageTasks import GetMultipleHighlights  # noqa: E402
 from Components.EngagementScorer import EngagementScorer  # noqa: E402
 
 CACHE = os.path.join(HERE, "data", "cache")
+CLAUDE_CACHE = os.path.join(HERE, "data", "claude_cache")
+
+
+def get_claude_candidates(vid: str, text: str, n_cand: int):
+    """Claude's over-generated candidates, cached per video so we call Claude once ever."""
+    os.makedirs(CLAUDE_CACHE, exist_ok=True)
+    cache_f = os.path.join(CLAUDE_CACHE, f"{vid}_{n_cand}.json")
+    if os.path.exists(cache_f):
+        return [tuple(x) for x in json.load(open(cache_f))]
+    cands = GetMultipleHighlights(text, num_highlights=n_cand)
+    cands = [(int(s), int(e)) for s, e in cands if e > s]
+    json.dump(cands, open(cache_f, "w"))
+    return cands
 
 
 def load_cached(vid: str):
@@ -73,7 +86,7 @@ def topk_value(actual: list[float], order: list[int], k: int) -> float:
     return float(sum(actual[i] for i in order[:k]))
 
 
-def process(vid: str, scorer, n_cand: int, k: int, rng) -> dict | None:
+def process(vid: str, scorer, n_cand: int, k: int, rng, cand_rows: list | None = None):
     audio, segs = load_cached(vid)
     if audio is None or not segs:
         return None
@@ -82,18 +95,26 @@ def process(vid: str, scorer, n_cand: int, k: int, rng) -> dict | None:
     if not heatmap:
         return None
     y, sr = audio
+    dur = (info or {}).get("duration") or (len(y) / sr)
 
-    cands = GetMultipleHighlights(trans_text(segs), num_highlights=n_cand)  # Claude order
-    cands = [(int(s), int(e)) for s, e in cands if e > s]
+    cands = get_claude_candidates(vid, trans_text(segs), n_cand)   # cached Claude order
     if len(cands) < k + 1:
         return None
 
     scores, actual = [], []
-    for (s, e) in cands:
+    for rank, (s, e) in enumerate(cands):
         yseg = y[int(s * sr):int(e * sr)]
         feats = F.extract_window_features(yseg, sr, yseg, text_in(segs, s, e))
         scores.append(scorer.score(feats))
-        actual.append(heatmap_value(heatmap, s, e))
+        av = heatmap_value(heatmap, s, e)
+        actual.append(av)
+        if cand_rows is not None:
+            # training row: features + task context + real replay label
+            cand_rows.append({
+                "vid": vid, "claude_rank": rank, "start": s, "end": e,
+                "dur": e - s, "position": s / dur if dur else 0.0,
+                **feats, "label": av,
+            })
 
     n = len(cands)
     claude_order = list(range(n))                       # Claude best-first
@@ -125,35 +146,48 @@ def main():
     ap.add_argument("--candidates", type=int, default=8)
     ap.add_argument("--k", type=int, default=3)
     ap.add_argument("--limit", type=int, default=0, help="cap #videos (0=all) for a quick test")
+    ap.add_argument("--dump-candidates", default="",
+                    help="also write per-candidate (features + real replay label) rows here, "
+                         "the training set for retraining the scorer on the real task")
     args = ap.parse_args()
 
     out_path = "data/claude_vs_scorer_results.csv"
+    cand_path = args.dump_candidates
     vids = list(pd.read_csv(args.data)["video_id"].unique())
     if args.limit:
         vids = vids[:args.limit]
 
-    # Resume: skip videos already saved so an interrupted run continues where it stopped.
+    # Resume: skip videos already processed. When dumping candidates, "done" tracks the
+    # candidate CSV so we collect every video once even if results were saved earlier.
     done = set()
-    if os.path.exists(out_path):
+    if cand_path and os.path.exists(cand_path):
+        done = set(pd.read_csv(cand_path)["vid"].astype(str))
+    elif not cand_path and os.path.exists(out_path):
         done = set(pd.read_csv(out_path)["vid"].astype(str))
     todo = [v for v in vids if str(v) not in done]
 
     scorer = EngagementScorer()
     print(f"Scorer: {scorer.kind} | features={scorer.feature_names}")
     print(f"Over-generate {args.candidates} candidates, pick top-{args.k}. "
-          f"{len(done)} done, {len(todo)} remaining.\n")
+          f"{len(done)} done, {len(todo)} remaining."
+          + (f" Dumping candidates -> {cand_path}" if cand_path else "") + "\n")
 
     rng = np.random.RandomState(0)
     for i, vid in enumerate(todo, 1):
+        cand_rows = [] if cand_path else None
         try:
-            r = process(vid, scorer, args.candidates, args.k, rng)
+            r = process(vid, scorer, args.candidates, args.k, rng, cand_rows)
         except Exception as e:
             print(f"[{i}/{len(todo)}] {vid}: ERROR {type(e).__name__}: {str(e)[:80]}")
             continue
+        if cand_path and cand_rows:
+            pd.DataFrame(cand_rows).to_csv(
+                cand_path, mode="a", header=not os.path.exists(cand_path), index=False)
         if r:
-            # append immediately so progress survives an interruption / sleep
-            pd.DataFrame([r]).to_csv(
-                out_path, mode="a", header=not os.path.exists(out_path), index=False)
+            if str(vid) not in (set(pd.read_csv(out_path)["vid"].astype(str))
+                                if os.path.exists(out_path) else set()):
+                pd.DataFrame([r]).to_csv(
+                    out_path, mode="a", header=not os.path.exists(out_path), index=False)
             print(f"[{i}/{len(todo)}] {vid}: claude_skill={r['claude']:+.2f} "
                   f"scorer_skill={r['scorer']:+.2f}  (n_cand={r['n_cand']})")
 
