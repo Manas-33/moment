@@ -12,6 +12,8 @@ from Components.Edit import extractAudio, crop_video, extractAudioDubbed
 from Components.Transcription import transcribeAudio, transcribeAudioWithWordTimestamps
 from Components.LanguageTasks import GetHighlight, GetMultipleHighlights
 from Components.FaceCrop import crop_to_vertical, combine_videos, letterbox_to_portrait
+from Components.ReframeCrop import reframe_to_vertical
+from Components.Diarization import build_speaker_color_fn
 from Components.GenerateCaptions import add_captions
 from Components.Translation import translate_transcript_with_timestamps
 from Components.TextToSpeech import transcript_to_speech, merge_audio_with_video
@@ -133,7 +135,7 @@ def process_video_task(video_processing_id):
                     add_captions(
                         final_path,
                         captioned_path,
-                        font="PlayfairDisplay-VariableFont_wght.ttf",
+                        font="Poppins-Bold.ttf",
                         font_size=100,
                         font_color="white",
                         stroke_width=2,
@@ -235,7 +237,15 @@ def process_video_task(video_processing_id):
 
                 if video_processing.crop_to_portrait:
                     cropped = f"media/cropped_{video_processing_id}_{i}.mp4"
-                    crop_to_vertical(output, cropped)
+                    # Active-speaker-following reframe (YuNet + Silero VAD + mouth-motion).
+                    # Falls back to the legacy face crop if it fails for any reason.
+                    try:
+                        ok = reframe_to_vertical(output, cropped)
+                    except Exception as e:
+                        print(f"reframe_to_vertical failed ({e}); using legacy crop")
+                        ok = False
+                    if not ok:
+                        crop_to_vertical(output, cropped)
                     combine_videos(output, cropped, final_path)
                 else:
                     letterbox_to_portrait(output, final_path)
@@ -252,16 +262,27 @@ def process_video_task(video_processing_id):
                             else:
                                 print("No matching segments found, will transcribe the clip")
 
+                        # Per-speaker caption colors via diarization, on by default.
+                        # Set SPEAKER_COLORS=0 to disable. Best-effort: falls back to a
+                        # single highlight color if diarization is unavailable.
+                        speaker_color_fn = None
+                        if os.getenv("SPEAKER_COLORS", "1").lower() not in ("0", "false", "no"):
+                            try:
+                                speaker_color_fn = build_speaker_color_fn(final_path)
+                            except Exception as e:
+                                print(f"speaker colors unavailable: {e}")
+
                         add_captions(
                             final_path,
                             captioned_path,
-                            font="PlayfairDisplay-VariableFont_wght.ttf",
+                            font="Poppins-Bold.ttf",
                             font_size=110,
                             font_color="white",
                             stroke_width=2,
                             stroke_color="black",
                             highlight_current_word=True,
                             word_highlight_color="#29BFFF",
+                            speaker_color_fn=speaker_color_fn,
                             line_count=2,
                             padding=40,
                             shadow_strength=1.0,
@@ -482,7 +503,7 @@ def process_dubbing_task(dubbing_id):
                 add_captions(
                     dubbed_video_path,
                     captioned_path,
-                    font="PlayfairDisplay-VariableFont_wght.ttf",
+                    font="Poppins-Bold.ttf",
                     font_size=110,
                     font_color="white",
                     stroke_width=2,
