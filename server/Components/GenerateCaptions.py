@@ -1,4 +1,4 @@
-from moviepy.editor import VideoFileClip, CompositeVideoClip
+from moviepy import VideoFileClip, CompositeVideoClip
 import subprocess
 import tempfile
 import time
@@ -130,7 +130,7 @@ def add_captions(
     video_file,
     output_file = "with_transcript.mp4",
 
-    font = "PlayfairDisplay-VariableFont_wght.ttf",
+    font = "Poppins-Bold.ttf",
     font_size = 110,
     font_color = "white",
 
@@ -139,6 +139,9 @@ def add_captions(
 
     highlight_current_word = True,
     word_highlight_color = "green",
+    # Optional fn(time_seconds) -> hex color, for per-speaker highlight colors
+    # (from diarization). When None, word_highlight_color is used for every word.
+    speaker_color_fn = None,
 
     line_count = 2,
     fit_function = None,
@@ -234,7 +237,10 @@ def add_captions(
                 for w in words:
                     word_obj = Word(w)
                     if highlight_current_word and index == current_index:
-                        word_obj.set_color(word_highlight_color)
+                        hl_color = word_highlight_color
+                        if speaker_color_fn is not None:
+                            hl_color = speaker_color_fn(caption["start"]) or word_highlight_color
+                        word_obj.set_color(hl_color)
                     index += 1
                     word_list.append(word_obj)
 
@@ -243,23 +249,23 @@ def add_captions(
                 while shadow_left >= 1:
                     shadow_left -= 1
                     shadow = create_shadow(line["text"], font_size, font, shadow_blur, opacity=1)
-                    shadow = shadow.set_start(caption["start"])
-                    shadow = shadow.set_duration(caption["end"] - caption["start"])
-                    shadow = shadow.set_position(pos)
+                    shadow = shadow.with_start(caption["start"])
+                    shadow = shadow.with_duration(caption["end"] - caption["start"])
+                    shadow = shadow.with_position(pos)
                     clips.append(shadow)
 
                 if shadow_left > 0:
                     shadow = create_shadow(line["text"], font_size, font, shadow_blur, opacity=shadow_left)
-                    shadow = shadow.set_start(caption["start"])
-                    shadow = shadow.set_duration(caption["end"] - caption["start"])
-                    shadow = shadow.set_position(pos)
+                    shadow = shadow.with_start(caption["start"])
+                    shadow = shadow.with_duration(caption["end"] - caption["start"])
+                    shadow = shadow.with_position(pos)
                     clips.append(shadow)
 
                 # Create text
                 text = create_text_ex(word_list, font_size, font_color, font, stroke_color=stroke_color, stroke_width=stroke_width)
-                text = text.set_start(caption["start"])
-                text = text.set_duration(caption["end"] - caption["start"])
-                text = text.set_position(pos)
+                text = text.with_start(caption["start"])
+                text = text.with_duration(caption["end"] - caption["start"])
+                text = text.with_position(pos)
                 clips.append(text)
 
                 text_y_offset = text_y_offset + line["height"]
@@ -275,11 +281,16 @@ def add_captions(
         print("Rendering video...")
 
     video_with_text = CompositeVideoClip(clips)
+    # CompositeVideoClip can carry fps/duration = None (moviepy probe is flaky and the
+    # composite does not always inherit them); set them so the writer gets real numbers.
+    video_with_text.fps = video.fps or 30
+    if video_with_text.duration is None:
+        video_with_text.duration = video.duration
 
     video_with_text.write_videofile(
         filename=output_file,
         codec="libx264",
-        fps=video.fps,
+        fps=float(video_with_text.fps or 30),
         logger="bar" if print_info else None,
     )
 
