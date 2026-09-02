@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+media/
+videos/
+*.mp4
+*.wav
+*.mp3
+*.webm
+db.sqlite3
+eval/data/
+.env
+.git/

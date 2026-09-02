@@ -1,0 +1,41 @@
+# Highlightr local stack: Redis broker + Django web + Celery worker.
+# Web stays responsive while long video jobs run on the worker.
+#
+#   docker compose up --build
+#   web on http://localhost:8000
+#
+# Needs server/.env for API keys (ANTHROPIC_API_KEY, DEEPGRAM_API_KEY, etc).
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build: ./server
+    command: gunicorn shorts_generator.wsgi:application --bind 0.0.0.0:8000 --timeout 300 --workers 2
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./server/.env
+    environment:
+      USE_CELERY: "1"
+      CELERY_BROKER_URL: redis://redis:6379/0
+    volumes:
+      - ./server:/app        # live code + shared media/db with the worker
+    depends_on:
+      - redis
+
+  worker:
+    build: ./server
+    command: celery -A shorts_generator worker --loglevel=info --concurrency=2
+    env_file:
+      - ./server/.env
+    environment:
+      USE_CELERY: "1"
+      CELERY_BROKER_URL: redis://redis:6379/0
+    volumes:
+      - ./server:/app
+    depends_on:
+      - redis
