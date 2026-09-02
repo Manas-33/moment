@@ -10,14 +10,13 @@ Cloudinary and Supabase are optional, for cloud storage and auth if you want the
 ## How it works
 
 ```mermaid
-flowchart LR
+flowchart TD
     U[User] --> C[Next.js dashboard]
-    C -->|video URL or upload| W[Django API]
-    W -->|queue job| R[(Redis)]
+    C <-->|submit and poll status| W[Django API]
+    W -->|enqueue job| R[(Redis)]
     R --> K[Celery worker]
-    W -.->|poll status| C
-    K -->|clips| DB[(DB + media)]
-    DB --> W
+    K -->|writes clips| D[(DB + media)]
+    D --> W
 ```
 
 A request from the dashboard hits the Django API, which queues a job and returns right
