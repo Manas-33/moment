@@ -42,7 +42,10 @@ CROWD_HOP_SEC = 10.0     # hop between crowd-reaction slices (non-overlapping)
 # ── YouTube: heatmap + audio ───────────────────────────────────────────────
 def fetch_info(url: str) -> dict | None:
     import yt_dlp
-    opts = {"quiet": True, "no_warnings": True, "skip_download": True}
+    # socket_timeout so a dead connection (e.g. after the machine sleeps) fails fast
+    # instead of blocking forever.
+    opts = {"quiet": True, "no_warnings": True, "skip_download": True,
+            "socket_timeout": 30}
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)

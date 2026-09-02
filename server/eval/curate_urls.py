@@ -41,12 +41,53 @@ STYLES = {
 }
 QUERIES = STYLES["podcast"]  # overridden by --style at runtime
 
+# Channel sources by category, for --source channels. We pull each channel's
+# videos, sort by views, and keep the most-popular ones (per category quota) that
+# have a heatmap - so we get each channel's hits, not its newest filler.
+CHANNELS = {
+    "standup": [
+        "https://www.youtube.com/@NetflixIsAJoke/videos",
+        "https://www.youtube.com/@ComedyCentralStandUp/videos",
+        "https://www.youtube.com/@DryBarComedy/videos",
+        "https://www.youtube.com/@justforlaughs/videos",
+    ],
+    "talent": [
+        "https://www.youtube.com/@bgt/videos",
+        "https://www.youtube.com/@americasgottalent/videos",
+        "https://www.youtube.com/@thevoiceglobal/videos",
+        "https://www.youtube.com/@TalentRecap/videos",
+    ],
+    "football": [
+        "https://www.youtube.com/@LiverpoolFC/videos",
+        "https://www.youtube.com/@ManCity/videos",
+        "https://www.youtube.com/@realmadrid/videos",
+        "https://www.youtube.com/@fcbarcelona/videos",
+    ],
+    "reaction": [
+        "https://www.youtube.com/@Sidemen/videos",
+        "https://www.youtube.com/@SidemenReacts/videos",
+        "https://www.youtube.com/@MoreSidemen/videos",
+    ],
+}
+
 # Keep durations manageable (download + transcribe + SER cost).
 MIN_DUR = 240      # 4 min
 MAX_DUR = 1500     # 25 min
 MIN_VIEWS = 200_000
 SEARCH_PER_QUERY = 20
 MAX_PROBES = 400
+CHANNEL_SAMPLE = 100   # how many recent uploads to pull per channel before sorting
+
+# Per-category quotas (channels mode). Football is capped low: self-published club
+# content skews to training/behind-scenes, weak for an audible-event scorer.
+QUOTAS = {"standup": 10, "talent": 10, "football": 4, "reaction": 8}
+
+# Title substrings to skip per category (calm, no-crowd content that hurts signal).
+EXCLUDE_TITLE = {
+    "football": ("inside training", "training", "first day", "first training",
+                 "press conference", "unveiled", "medical", "presentation",
+                 "signs for", "behind the scenes", "u18", "u21", "academy"),
+}
 
 
 def search_candidates(query: str, n: int) -> list[dict]:
@@ -57,6 +98,19 @@ def search_candidates(query: str, n: int) -> list[dict]:
             info = ydl.extract_info(f"ytsearch{n}:{query}", download=False)
     except Exception as e:
         print(f"  search error [{query}]: {type(e).__name__}: {str(e)[:80]}")
+        return []
+    return [e for e in (info.get("entries") or []) if e]
+
+
+def channel_candidates(channel_url: str, n: int) -> list[dict]:
+    """Flat-list a channel's uploads (most recent n)."""
+    opts = {"quiet": True, "no_warnings": True,
+            "extract_flat": "in_playlist", "skip_download": True, "playlistend": n}
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(channel_url, download=False)
+    except Exception as e:
+        print(f"  channel error [{channel_url}]: {type(e).__name__}: {str(e)[:80]}")
         return []
     return [e for e in (info.get("entries") or []) if e]
 
@@ -72,20 +126,26 @@ def has_heatmap(vid_id: str) -> tuple[bool, dict]:
     return bool(info.get("heatmap")), info
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--n", type=int, default=10)
-    ap.add_argument("--out", default="server/eval/urls.txt")
-    ap.add_argument("--style", choices=list(STYLES), default="podcast")
-    args = ap.parse_args()
+def _probe_keep(candidates: list[tuple], quota: int, kept: list, label: str):
+    """candidates: [(views, vid, title)] sorted desc. Probe heatmap, keep up to quota."""
+    got = 0
+    for views, vid, title in candidates[:MAX_PROBES]:
+        if got >= quota:
+            break
+        ok, info = has_heatmap(vid)
+        if ok:
+            kept.append(vid)
+            got += 1
+            v = f"{views:,}" if views else "?"
+            print(f"  [{label} {got}/{quota}] KEEP {vid}  dur={info.get('duration')}s  views={v}  '{title}'")
+    return got
 
-    global QUERIES
-    QUERIES = STYLES[args.style]
-    print(f"Style: {args.style} ({len(QUERIES)} queries)")
 
-    # 1-2. gather + pre-filter candidates across queries
+def curate_from_search(style: str, n: int) -> list[str]:
+    queries = STYLES[style]
+    print(f"Source: search | style: {style} ({len(queries)} queries)")
     seen, candidates = set(), []
-    for q in QUERIES:
+    for q in queries:
         for e in search_candidates(q, SEARCH_PER_QUERY):
             vid = e.get("id")
             if not vid or vid in seen:
@@ -95,29 +155,59 @@ def main():
             views = e.get("view_count") or 0
             if MIN_DUR <= dur <= MAX_DUR and views >= MIN_VIEWS:
                 candidates.append((views, vid, e.get("title", "")[:60]))
-    candidates.sort(reverse=True)  # most-viewed first (more likely to have heatmap)
+    candidates.sort(reverse=True)
     print(f"Pre-filtered candidates: {len(candidates)}")
-
-    # 3-4. probe for heatmap, keep until we have n
     kept = []
-    for i, (views, vid, title) in enumerate(candidates[:MAX_PROBES]):
-        ok, info = has_heatmap(vid)
-        if ok:
-            dur = info.get("duration")
-            kept.append(vid)
-            print(f"  [{len(kept)}/{args.n}] KEEP {vid}  dur={dur}s  views={views:,}  '{title}'")
-            if len(kept) >= args.n:
-                break
-        else:
-            reason = info.get("err", "no heatmap")
-            print(f"       skip {vid}  ({reason})")
+    _probe_keep(candidates, n, kept, "all")
+    return kept
+
+
+def curate_from_channels(per_category: int) -> list[str]:
+    print(f"Source: channels | quotas: {QUOTAS}")
+    seen, kept = set(), []
+    for cat, urls in CHANNELS.items():
+        quota = QUOTAS.get(cat, per_category)
+        excludes = EXCLUDE_TITLE.get(cat, ())
+        cands = []
+        for ch in urls:
+            for e in channel_candidates(ch, CHANNEL_SAMPLE):
+                vid = e.get("id")
+                if not vid or vid in seen:
+                    continue
+                seen.add(vid)
+                dur = e.get("duration") or 0
+                title = (e.get("title") or "")
+                if excludes and any(x in title.lower() for x in excludes):
+                    continue
+                if MIN_DUR <= dur <= MAX_DUR:
+                    cands.append((e.get("view_count") or 0, vid, title[:60]))
+        cands.sort(reverse=True)  # most-viewed within the category first
+        print(f"[{cat}] {len(cands)} duration-ok candidates; probing for heatmaps (quota {quota})...")
+        _probe_keep(cands, quota, kept, cat)
+    return kept
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n", type=int, default=10, help="total videos (search mode)")
+    ap.add_argument("--out", default="server/eval/urls.txt")
+    ap.add_argument("--source", choices=["search", "channels"], default="search")
+    ap.add_argument("--style", choices=list(STYLES), default="podcast")
+    ap.add_argument("--per-category", type=int, default=8,
+                    help="videos per category (channels mode)")
+    args = ap.parse_args()
+
+    if args.source == "channels":
+        kept = curate_from_channels(args.per_category)
+    else:
+        kept = curate_from_search(args.style, args.n)
 
     if not kept:
         print("No qualifying videos found.")
         return
     urls = [f"https://www.youtube.com/watch?v={v}" for v in kept]
     with open(args.out, "w") as f:
-        f.write("# Auto-curated podcast/interview videos with most-replayed heatmaps\n")
+        f.write("# Auto-curated videos with most-replayed heatmaps\n")
         f.write("\n".join(urls) + "\n")
     print(f"\nWrote {len(urls)} URLs -> {args.out}")
 
