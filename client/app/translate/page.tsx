@@ -19,6 +19,7 @@ import { createClient } from "@/utils/supabase/client"
 import Link from "next/link"
 import { History, Globe, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { useSearchParams } from "next/navigation"
 
 interface DubbingData {
@@ -303,35 +304,42 @@ function TranslatePageContent() {
     <SidebarProvider>
       <AppSidebar user={parsedUser}/>
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-          <div className="flex items-center gap-2 px-4 w-full">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Dubbing</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <div className="ml-auto">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/translate/history">
-                  <History className="mr-2 h-4 w-4" />
-                  View History
-                </Link>
-              </Button>
-            </div>
+        <header className="flex h-[66px] shrink-0 items-center gap-2 border-b bg-card/60 px-5">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink href="/dashboard">Studio</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Dubbing</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="ml-auto flex items-center gap-2.5">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/translate/history">
+                <History className="mr-1.5 h-4 w-4" />
+                View history
+              </Link>
+            </Button>
+            <ThemeToggle />
           </div>
         </header>
-        
-        <div className="flex flex-1 flex-col gap-6 p-6">
+
+        <div className="flex flex-1 flex-col gap-6 p-8 md:p-11">
           <div className="mx-auto w-full max-w-3xl">
-            <h1 className="mb-6 text-3xl font-bold tracking-tight">Translation & Dubbing</h1>
+            <div className="mb-8">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
+                Translate &amp; dub your clips
+              </h1>
+              <p className="mt-2.5 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+                Translate a clip&apos;s transcript and voice it in a new language to reach a wider
+                audience.
+              </p>
+            </div>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <TranslationForm 

@@ -4,7 +4,7 @@ import * as React from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Loader2, Upload, Globe, Youtube } from "lucide-react"
+import { Loader2, Languages } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -94,12 +94,7 @@ export function TranslationForm({ onSubmit, isLoading }: TranslationFormProps) {
   }
 
   return (
-    <div className="rounded-lg border bg-card p-6 shadow-sm">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Video Translation & Dubbing</h2>
-        <p className="text-muted-foreground">Translate and dub your videos into multiple languages</p>
-      </div>
-      
+    <div className="rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(30,27,23,0.04),0_12px_30px_-20px_rgba(30,27,23,0.14)]">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <FormField
@@ -224,16 +219,16 @@ export function TranslationForm({ onSubmit, isLoading }: TranslationFormProps) {
             )}
           />
           
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="h-11 w-full rounded-xl" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing Translation
+                Processing translation
               </>
             ) : (
               <>
-                <Globe className="mr-2 h-4 w-4" />
-                Translate & Dub Video
+                <Languages className="mr-2 h-4 w-4" />
+                Translate &amp; dub
               </>
             )}
           </Button>

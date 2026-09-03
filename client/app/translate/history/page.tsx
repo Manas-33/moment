@@ -40,7 +40,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink, Video, Globe, Play } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { ArrowLeft, ExternalLink, Globe, Play } from "lucide-react";
 
 interface DubbingData {
   id: string;
@@ -190,40 +191,44 @@ export default function TranslateHistoryPage() {
     <SidebarProvider>
       <AppSidebar user={parsedUser} />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-          <div className="flex items-center gap-2 px-4 w-full">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/translate">Dubbing</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>History</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <div className="ml-auto">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/translate">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Dubbing
-                </Link>
-              </Button>
-            </div>
+        <header className="flex h-[66px] shrink-0 items-center gap-2 border-b bg-card/60 px-5">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink href="/dashboard">Studio</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink href="/translate">Dubbing</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>History</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="ml-auto flex items-center gap-2.5">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/translate">
+                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                Back to dubbing
+              </Link>
+            </Button>
+            <ThemeToggle />
           </div>
         </header>
-        
-        <div className="flex flex-1 flex-col gap-6 p-6">
+
+        <div className="flex flex-1 flex-col gap-6 p-8 md:p-11">
           <div className="mx-auto w-full max-w-6xl">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold tracking-tight">Translation History</h1>
+            <div className="mb-8">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
+                Translation history
+              </h1>
+              <p className="mt-2.5 text-[15px] text-muted-foreground">
+                Every clip you&apos;ve translated and dubbed, newest first.
+              </p>
             </div>
 
             {isLoading ? (

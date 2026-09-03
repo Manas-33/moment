@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { ArrowLeft, ExternalLink, Video, Edit as EditIcon, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { useRouter } from "next/navigation"
 
 interface ProcessingData {
@@ -225,36 +226,40 @@ export default function HistoryPage() {
     <SidebarProvider>
       <AppSidebar user={parsedUser} />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Processing History</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <div className="ml-auto">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/dashboard">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Dashboard
-                </Link>
-              </Button>
-            </div>
+        <header className="flex h-[66px] shrink-0 items-center gap-2 border-b bg-card/60 px-5">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/dashboard">Studio</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>History</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="ml-auto flex items-center gap-2.5">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard">
+                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                Back to studio
+              </Link>
+            </Button>
+            <ThemeToggle />
           </div>
         </header>
-        
-        <div className="flex flex-1 flex-col gap-6 p-6">
+
+        <div className="flex flex-1 flex-col gap-6 p-8 md:p-11">
           <div className="mx-auto w-full max-w-6xl">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold tracking-tight">Processing History</h1>
+            <div className="mb-8">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
+                Processing history
+              </h1>
+              <p className="mt-2.5 text-[15px] text-muted-foreground">
+                Every video you&apos;ve turned into shorts, newest first.
+              </p>
             </div>
             
             {isLoading ? (
@@ -293,7 +298,7 @@ export default function HistoryPage() {
                           <div>
                             <h3 className="font-medium">Source</h3>
                             <div className="flex items-start gap-3 mt-1">
-                              <div className="w-24 h-14 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                              <div className="w-24 h-14 rounded overflow-hidden bg-muted flex-shrink-0">
                                 <img 
                                   src={getYouTubeThumbnail(selectedVideo.youtube_url)} 
                                   alt="Video thumbnail" 
@@ -308,7 +313,7 @@ export default function HistoryPage() {
                                 <span className="font-medium">
                                   {getVideoTitle(selectedVideo.youtube_url)}
                                 </span>
-                                <a href={selectedVideo.youtube_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 flex items-center text-sm">
+                                <a href={selectedVideo.youtube_url} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center text-sm">
                                   Original Video <ExternalLink className="ml-1 h-3 w-3" />
                                 </a>
                               </div>
@@ -341,7 +346,7 @@ export default function HistoryPage() {
                                           href={clip.url} 
                                           target="_blank" 
                                           rel="noopener noreferrer" 
-                                          className="text-blue-500 text-sm"
+                                          className="text-primary text-sm"
                                         >
                                         <Button variant="outline">
                                           View
@@ -349,13 +354,13 @@ export default function HistoryPage() {
                                         </a>
                                         <Link
                                           href={`/dashboard/edit?id=${selectedVideo.id}&clip=${index}`}
-                                          className="text-blue-500 text-sm ml-2"
+                                          className="text-primary text-sm ml-2"
                                         >
                                           <Button variant="outline">
                                           Edit
                                         </Button>
                                         </Link>
-                                        <Button variant="outline" className="text-blue-500 text-sm" onClick={() => handleTranslate(clip.url)}>
+                                        <Button variant="outline" className="text-primary text-sm" onClick={() => handleTranslate(clip.url)}>
                                           Translate
                                         </Button>
                                       </div>
@@ -414,7 +419,7 @@ export default function HistoryPage() {
                               <TableRow key={video.id}>
                                 <TableCell className="min-w-[200px]">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-16 h-9 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                    <div className="w-16 h-9 rounded overflow-hidden bg-muted flex-shrink-0">
                                       <img 
                                         src={getYouTubeThumbnail(video.youtube_url)} 
                                         alt="Video thumbnail" 
@@ -433,7 +438,7 @@ export default function HistoryPage() {
                                         href={video.youtube_url} 
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-xs text-blue-500 hover:underline"
+                                        className="text-xs text-primary hover:underline"
                                       >
                                         Source Link
                                       </a>
