@@ -1,4 +1,5 @@
 "use client"
+import { API_URL } from "@/lib/api";
 
 import React, { useEffect, useState } from "react"
 import { AppSidebar } from "@//components/app-sidebar"
@@ -91,7 +92,7 @@ export default function HistoryPage() {
   const fetchUserVideos = async (userEmail: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`http://localhost:8000/api/shorts/user/`, {
+      const response = await fetch(`${API_URL}/api/shorts/user/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

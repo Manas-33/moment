@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "@/lib/api";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -111,7 +112,7 @@ export default function TranslateHistoryPage() {
   const fetchUserDubbings = async (userEmail: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`http://localhost:8000/api/dubbing/user/`, {
+      const response = await fetch(`${API_URL}/api/dubbing/user/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

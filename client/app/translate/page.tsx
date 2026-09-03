@@ -1,4 +1,5 @@
 "use client"
+import { API_URL } from "@/lib/api";
 
 import React, { useEffect, useState, Suspense } from "react"
 import { AppSidebar } from "@//components/app-sidebar"
@@ -108,7 +109,7 @@ function TranslatePageContent() {
   const fetchDubbingById = async (id: string) => {
     try {
       setIsLoadingHistory(true);
-      const response = await fetch(`http://localhost:8000/api/dubbing/status/${id}/`);
+      const response = await fetch(`${API_URL}/api/dubbing/status/${id}/`);
       
       if (response.ok) {
         const data = await response.json();
@@ -143,7 +144,7 @@ function TranslatePageContent() {
   const fetchUserDubbings = async (userEmail: string) => {
     try {
       setIsLoadingHistory(true);
-      const response = await fetch(`http://localhost:8000/api/dubbing/user/`, {
+      const response = await fetch(`${API_URL}/api/dubbing/user/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -191,7 +192,7 @@ function TranslatePageContent() {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/dubbing/status/${processingId}/`);
+        const response = await fetch(`${API_URL}/api/dubbing/status/${processingId}/`);
         const data = await response.json();
         
         setProcessingStatus(data.status);
@@ -254,7 +255,7 @@ function TranslatePageContent() {
       setIsSubmitting(true)
       setIsLoading(true)
       
-      const response = await fetch('http://localhost:8000/api/dubbing/', {
+      const response = await fetch(`${API_URL}/api/dubbing/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

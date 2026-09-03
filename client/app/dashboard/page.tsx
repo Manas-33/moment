@@ -1,4 +1,5 @@
 "use client"
+import { API_URL } from "@/lib/api";
 
 import React, { useEffect, useState, Suspense } from "react"
 import { AppSidebar } from "@//components/app-sidebar"
@@ -88,7 +89,7 @@ function DashboardContent() {
   const fetchProcessingById = async (id: string) => {
     try {
       setIsLoadingHistory(true);
-      const response = await fetch(`http://localhost:8000/api/shorts/status/${id}/`);
+      const response = await fetch(`${API_URL}/api/shorts/status/${id}/`);
       
       if (response.ok) {
         const data = await response.json();
@@ -123,7 +124,7 @@ function DashboardContent() {
   const fetchUserVideos = async (userEmail: string) => {
     try {
       setIsLoadingHistory(true);
-      const response = await fetch(`http://localhost:8000/api/shorts/user/`, {
+      const response = await fetch(`${API_URL}/api/shorts/user/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +172,7 @@ function DashboardContent() {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/shorts/status/${processingId}/`);
+        const response = await fetch(`${API_URL}/api/shorts/status/${processingId}/`);
         const data = await response.json();
         
         setProcessingStatus(data.status);
@@ -227,7 +228,7 @@ function DashboardContent() {
     setIsLoading(true)
     
     try {
-      const response = await fetch('http://localhost:8000/api/shorts/', {
+      const response = await fetch(`${API_URL}/api/shorts/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

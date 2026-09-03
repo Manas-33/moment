@@ -1,3 +1,4 @@
+import { API_URL } from "@/lib/api";
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import {
@@ -31,7 +32,7 @@ export function InstagramUploadModal({ videoPath, onSuccess }: InstagramUploadMo
   const handleUpload = async () => {
     try {
       setLoading(true)
-      const response = await fetch("http://localhost:8000/api/instagram/upload/", {
+      const response = await fetch(`${API_URL}/api/instagram/upload/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
