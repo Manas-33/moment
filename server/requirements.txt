@@ -102,3 +102,4 @@ gunicorn>=21.0
 torchaudio==2.6.0
 silero-vad>=5.1
 pyannote.audio==3.3.2
+matplotlib

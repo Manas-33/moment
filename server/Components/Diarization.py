@@ -39,12 +39,22 @@ def _get_pipeline():
 
     if not hasattr(np, "NaN"):
         np.NaN = np.nan
+    # Gated model: authenticate with an HF token from the environment. huggingface_hub
+    # reads HF_TOKEN automatically, but we also pass it explicitly to pyannote and mirror
+    # it to the standard env names so any internal download picks it up too.
+    token = (os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN")
+             or os.getenv("HUGGING_FACE_HUB_TOKEN"))
+    if token:
+        os.environ.setdefault("HF_TOKEN", token)
+        os.environ.setdefault("HUGGINGFACE_HUB_TOKEN", token)
+
     orig_dl, orig_load = H.hf_hub_download, torch.load
     H.hf_hub_download = lambda *a, **k: (k.pop("use_auth_token", None), orig_dl(*a, **k))[1]
     torch.load = lambda *a, **k: orig_load(*a, **{**k, "weights_only": False})
     try:
         from pyannote.audio import Pipeline
-        _PIPELINE = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
+        _PIPELINE = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-3.1", use_auth_token=token)
     finally:
         torch.load = orig_load          # restore; keep the benign hub shim
     return _PIPELINE
