@@ -191,6 +191,16 @@ def add_captions(
 
     # Open the video file
     video = VideoFileClip(video_file)
+
+    # The incoming font/stroke/padding sizes are tuned for a 1080-wide vertical frame.
+    # Reframed clips are often much narrower (e.g. 405px), where a fixed 110px font is
+    # enormous and overflows the frame. Scale the typography to the real frame width so
+    # captions read consistently at any resolution.
+    type_scale = (video.w or 1080) / 1080.0
+    font_size = max(12, int(round(font_size * type_scale)))
+    stroke_width = max(1, int(round(stroke_width * type_scale)))
+    padding = max(8, int(round(padding * type_scale)))
+
     text_bbox_width = video.w-padding*2
     clips = [video]
 

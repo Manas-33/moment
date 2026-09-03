@@ -1,6 +1,7 @@
 from moviepy import TextClip, ImageClip, VideoClip, CompositeVideoClip
-from PIL import Image, ImageFilter, ImageFont
+from PIL import Image, ImageFilter, ImageFont, ImageDraw
 import numpy
+import math
 import tempfile
 
 text_cache = {}
@@ -167,6 +168,61 @@ def create_composite_text(text_clips: list[VideoClip], font, font_size) -> Compo
 def str_to_charlist(text: str) -> list[Character]:
     return [Character(char) for char in text]
 
+def _render_tokens_pil(
+    tokens: list[tuple[str, str]],
+    fontsize: int,
+    font_path: str,
+    stroke_color: str | None,
+    stroke_width: int,
+    opacity: float,
+) -> ImageClip:
+    """Draw a run of coloured tokens ("word", "#hex") onto one RGBA image.
+
+    Every token is drawn into the same full em-box (ascent + descent) at a shared
+    baseline, so the tops of tall glyphs are never clipped and words with and without
+    descenders stay aligned. This replaces the old per-character MoviePy compositor,
+    whose ``fontsize // 3`` / ``scale_factor`` width hack and clip-size mangling broke
+    (clipped tops, overlapping glyphs) once the font was scaled below its 110px design.
+    """
+    pil_font = ImageFont.truetype(font_path, fontsize)
+    ascent, descent = pil_font.getmetrics()
+    pad = stroke_width + 2
+    space_w = pil_font.getlength(" ")
+
+    # Measure total width first.
+    total_w = 0.0
+    widths = []
+    for i, (word, _c) in enumerate(tokens):
+        w = pil_font.getlength(word)
+        widths.append(w)
+        total_w += w
+        if i < len(tokens) - 1:
+            total_w += space_w
+
+    height = ascent + descent + pad * 2
+    width = int(math.ceil(total_w)) + pad * 2
+    img = Image.new("RGBA", (max(width, 1), max(height, 1)), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    x = float(pad)
+    for i, (word, col) in enumerate(tokens):
+        draw.text(
+            (x, pad),
+            word,
+            font=pil_font,
+            fill=col,
+            stroke_width=stroke_width if stroke_color else 0,
+            stroke_fill=stroke_color,
+        )
+        x += widths[i] + (space_w if i < len(tokens) - 1 else 0)
+
+    if opacity < 1:
+        alpha = img.split()[3].point(lambda a: int(a * opacity))
+        img.putalpha(alpha)
+
+    return ImageClip(numpy.array(img))
+
+
 def create_text_ex(
     text: list[Word] | list[Character] | str,
     fontsize,
@@ -178,8 +234,25 @@ def create_text_ex(
     stroke_color = None,
     stroke_width = 1,
     kerning = 0,
-) -> CompositeVideoClip:
+) -> VideoClip:
+    # A plain string renders as a single clip: MoviePy's own text engine spaces and
+    # baselines it correctly, so there is nothing to composite (used for shadows and
+    # for line-size measurement).
     if isinstance(text, str):
-        text = str_to_charlist(text)
-    text_clips = create_text_chars(text, fontsize, color, font, bg_color, blur_radius, opacity, stroke_color, stroke_width)
-    return create_composite_text(text_clips, font, fontsize // 3)
+        return create_text(text, fontsize, color, font, bg_color, blur_radius, opacity, stroke_color, stroke_width)
+
+    # A list of Word/Character tokens: each may carry its own colour (for the karaoke
+    # word highlight), so draw them as one baseline-aligned run.
+    tokens: list[tuple[str, str]] = []
+    for item in text:
+        if isinstance(item, Word):
+            tokens.append((item.word, item.color or color))
+        elif isinstance(item, Character):
+            tokens.append((item.text, item.color or color))
+        else:
+            tokens.append((str(item), color))
+
+    clip = _render_tokens_pil(tokens, int(fontsize), font, stroke_color, int(stroke_width), opacity)
+    if blur_radius:
+        clip = blur_text_clip(clip, blur_radius)
+    return clip
