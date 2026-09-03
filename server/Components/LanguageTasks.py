@@ -62,32 +62,52 @@ def _deduplicate_highlights(highlights, min_gap_seconds=10):
     return deduped
 
 
-SINGLE_HIGHLIGHT_SYSTEM = """
-Baised on the Transcription user provides with start and end, Highilight the main parts in less then 1 min which can be directly converted into a short. highlight it such that its intresting and also keep the time staps for the clip to start and end. only select a continues Part of the video
-
-Follow this Format and return in valid json 
-[{
-start: "Start time of the clip",
-content: "Highlight Text",
-end: "End Time for the highlighted clip"
-}]
-it should be one continues clip as it will then be cut from the video and uploaded as a tiktok video. so only have one start, end and content
-
-Dont say anything else, just return Proper Json. no explanation etc
+# Short-form clip length guardrails (seconds). The prompt asks for content-driven
+# lengths (~15-45s, up to ~60s); these are the hard safety net so a stray LLM answer
+# can't produce a 3-second accident or a clip that just keeps going.
+MIN_CLIP_SEC = 10
+MAX_CLIP_SEC = 75
 
 
-IF YOU DONT HAVE ONE start AND end WHICH IS FOR THE LENGTH OF THE ENTIRE HIGHLIGHT, THEN 10 KITTENS WILL DIE, I WILL DO JSON['start'] AND IF IT DOESNT WORK THEN...
+def _enforce_bounds(highlights):
+    """Drop clips shorter than MIN_CLIP_SEC and hard-cap clips longer than MAX_CLIP_SEC."""
+    bounded = []
+    for start, end in highlights:
+        dur = end - start
+        if dur < MIN_CLIP_SEC:
+            print(f"Dropping too-short highlight ({start}-{end}, {dur}s)")
+            continue
+        if dur > MAX_CLIP_SEC:
+            print(f"Capping long highlight ({start}-{end}, {dur}s) to {MAX_CLIP_SEC}s")
+            end = start + MAX_CLIP_SEC
+        bounded.append((start, end))
+    return bounded
+
+
+SINGLE_HIGHLIGHT_SYSTEM = """You are given a timestamped transcription of a video.
+Find the single most engaging moment that works as a standalone short-form video (TikTok / YouTube Short / Instagram Reel).
+
+Rules:
+- It must be ONE continuous segment (a single start and end).
+- Make it only as long as it needs to be to land one complete, self-contained idea (hook -> point -> payoff), and not a second longer. Aim for 15-45 seconds; go up to about 60 only if the moment genuinely needs it. Never shorter than 10 seconds or longer than 75 seconds. Do not pad it to reach a length.
+- Start on a strong hook and end on a natural conclusion — never begin or cut off mid-sentence.
+
+Return ONLY valid JSON, nothing else:
+[{"start": <seconds>, "content": "Highlight text", "end": <seconds>}]
 """
 
 MULTI_HIGHLIGHT_SYSTEM = """You are given a timestamped transcription of a long video.
 Your job is to find the {num_highlights} most engaging, viral-worthy highlights that can each be used as a standalone short-form video (TikTok / YouTube Short / Instagram Reel).
 
 Rules:
-1. Each highlight MUST be a single continuous segment between 30-60 seconds long.
-2. All {num_highlights} highlights MUST come from DIFFERENT parts of the video — no overlapping time ranges.
-3. Spread the highlights across the full length of the video so the audience sees variety.
-4. Rank them by virality / engagement potential (best first).
-5. Each highlight should be self-contained and make sense without extra context.
+1. Each highlight MUST be a single continuous segment (one start and one end).
+2. Make each clip only as long as it needs to be to land ONE complete, self-contained idea — a hook, the point, and a payoff — and not a second longer. Length should fit the moment, NOT a fixed target: most clips work best at 15-45 seconds; go up to about 60 seconds only when the moment genuinely needs it. Never pad a clip to fill time. Never shorter than 10 seconds or longer than 75 seconds. It is good for the {num_highlights} clips to have DIFFERENT lengths.
+3. Optimize for completion: pick moments a viewer will watch to the very end and re-loop — that is what the platforms reward.
+4. Each clip must start on a strong hook (grab attention in the first few seconds) and end on a natural conclusion — never begin or cut off mid-sentence, and never trail into filler.
+5. All {num_highlights} highlights MUST come from DIFFERENT parts of the video — no overlapping time ranges.
+6. Spread the highlights across the full length of the video so the audience sees variety.
+7. Rank them by virality / engagement potential (best first).
+8. Each highlight should be self-contained and make sense without extra context.
 
 Return ONLY valid JSON — no markdown, no explanation, no extra text.
 
@@ -143,7 +163,7 @@ def GetMultipleHighlights(transcription, num_highlights=3, max_retries=2):
         return []
     if num_highlights == 1:
         start, end = GetHighlight(transcription)
-        return [(start, end)] if start != end else []
+        return _enforce_bounds([(start, end)]) if start != end else []
 
     system_prompt = MULTI_HIGHLIGHT_SYSTEM.replace("{num_highlights}", str(num_highlights))
 
@@ -158,6 +178,7 @@ def GetMultipleHighlights(transcription, num_highlights=3, max_retries=2):
 
             highlights = _extract_multiple_highlights(raw)
             highlights = _deduplicate_highlights(highlights)
+            highlights = _enforce_bounds(highlights)
 
             if len(highlights) >= num_highlights:
                 return highlights[:num_highlights]
@@ -190,7 +211,7 @@ def GetMultipleHighlights(transcription, num_highlights=3, max_retries=2):
             print(f"Skipping overlapping fallback highlight ({start}-{end})")
             break
 
-    return highlights
+    return _enforce_bounds(highlights)[:num_highlights]
 
 
 if __name__ == "__main__":
