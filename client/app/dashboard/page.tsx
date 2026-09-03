@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import { History, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { useSearchParams } from "next/navigation"
 
 interface ProcessingData {
@@ -285,35 +286,42 @@ function DashboardContent() {
     <SidebarProvider>
       <AppSidebar user={parsedUser}/>
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-          <div className="flex items-center gap-2 px-4 w-full">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Podcast to Shorts</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <div className="ml-auto">
-              <Button variant="ghost" size="sm" asChild className="ml-auto">
-                <Link href="/dashboard/history">
-                  <History className="mr-2 h-4 w-4" />
-                  View History
-                </Link>
-              </Button>
-            </div>
+        <header className="flex h-[66px] shrink-0 items-center gap-2 border-b bg-card/60 px-5">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink href="/dashboard">Studio</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Create</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="ml-auto flex items-center gap-2.5">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/history">
+                <History className="mr-1.5 h-4 w-4" />
+                View history
+              </Link>
+            </Button>
+            <ThemeToggle />
           </div>
         </header>
-        
-        <div className="flex flex-1 flex-col gap-6 p-6">
+
+        <div className="flex flex-1 flex-col gap-8 p-8 md:p-11">
           <div className="mx-auto w-full max-w-3xl">
-            <h1 className="mb-6 text-3xl font-bold tracking-tight">Create Shorts from Podcasts</h1>
+            <div className="mb-8">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
+                Create shorts from any video
+              </h1>
+              <p className="mt-2.5 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+                Paste a YouTube link or upload a file. Moment transcribes it, finds the
+                strongest moments, and cuts them into vertical shorts.
+              </p>
+            </div>
             <PodcastForm onSubmit={handlePodcastSubmit} isLoading={isLoading} />
             {isLoadingHistory ? (
               <div className="mt-6 text-center">
