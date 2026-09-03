@@ -1,198 +1,189 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Check, Star } from "lucide-react"
-import { motion } from "framer-motion"
-import { useRouter } from "next/navigation"
+import * as React from "react"
+import Link from "next/link"
+import { Check, Droplet } from "lucide-react"
 
-const pricingPlans = [
+import { cn } from "@/lib/utils"
+import { Button } from "./ui/button"
+
+type Feature = { label: string; muted?: boolean }
+
+const PLANS = [
   {
     name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for getting started with AI-powered content creation",
+    price: { monthly: "$0", yearly: "$0" },
+    period: "/forever",
+    tagline: "For trying Moment out.",
+    cta: "Get started",
+    href: "/dashboard",
+    variant: "outline" as const,
+    tone: "light" as const,
     features: [
-      "5 video clips per month",
-      "Basic AI transcript generation",
-      "Standard video quality (720p)",
-      "Email support",
-      "Watermark on videos",
-    ],
-    limitations: [
-      "Limited to 10-minute source videos",
-      "Basic caption styling",
-    ],
-    buttonText: "Get Started",
-    buttonVariant: "outline" as const,
-    popular: false,
+      { label: "5 clips / month" },
+      { label: "720p export" },
+      { label: "Word-level captions" },
+      { label: "Moment watermark", muted: true },
+    ] as Feature[],
   },
   {
     name: "Pro",
-    price: "$29",
-    period: "per month",
-    description: "Ideal for content creators and small businesses",
+    price: { monthly: "$29", yearly: "$23" },
+    period: "/mo",
+    tagline: "For creators publishing weekly.",
+    cta: "Start Pro",
+    href: "/dashboard",
+    variant: "default" as const,
+    tone: "featured" as const,
     features: [
-      "50 video clips per month",
-      "Advanced AI transcript generation",
-      "HD video quality (1080p)",
-      "Multiple language support",
-      "Custom caption styling",
-      "No watermarks",
-      "Priority support",
-      "Batch processing",
-    ],
-    limitations: [],
-    buttonText: "Start Pro Trial",
-    buttonVariant: "default" as const,
-    popular: true,
+      { label: "50 clips / month" },
+      { label: "1080p export" },
+      { label: "No watermark" },
+      { label: "Batch processing" },
+      { label: "Priority support" },
+    ] as Feature[],
   },
   {
     name: "Enterprise",
-    price: "$99",
-    period: "per month",
-    description: "For teams and organizations with high-volume needs",
+    price: { monthly: "$99", yearly: "$79" },
+    period: "/mo",
+    tagline: "For teams and platforms at scale.",
+    cta: "Contact sales",
+    href: "mailto:sales@moment.com?subject=Enterprise%20Plan%20Inquiry",
+    variant: "default" as const,
+    tone: "dark" as const,
     features: [
-      "Unlimited video clips",
-      "Enterprise AI models",
-      "4K video quality",
-      "All languages supported",
-      "Advanced customization",
-      "No watermarks",
-      "24/7 dedicated support",
-      "API access",
-      "Custom branding",
-      "Team collaboration tools",
-      "Advanced analytics",
-    ],
-    limitations: [],
-    buttonText: "Contact Sales",
-    buttonVariant: "outline" as const,
-    popular: false,
+      { label: "Unlimited clips" },
+      { label: "4K export" },
+      { label: "API access" },
+      { label: "Team tools & roles" },
+      { label: "Priority support" },
+    ] as Feature[],
   },
 ]
 
 export default function Pricing() {
-  const router = useRouter()
-
-  const handleGetStarted = (planName: string) => {
-    if (planName === "Enterprise") {
-      // For enterprise, you might want to redirect to a contact form
-      window.open("mailto:sales@moment.com?subject=Enterprise Plan Inquiry", "_blank")
-    } else {
-      router.push("/dashboard")
-    }
-  }
+  const [cycle, setCycle] = React.useState<"monthly" | "yearly">("monthly")
 
   return (
-    <section className="container py-16 mx-auto" id="pricing">
-      <div className="mx-auto max-w-6xl space-y-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="text-center"
-        >
-          <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">
-            Simple, Transparent Pricing
-          </h2>
-          <p className="text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400 mt-4">
-            Choose the perfect plan for your content creation needs. Upgrade or downgrade at any time.
-          </p>
-        </motion.div>
+    <section id="pricing" className="px-6 py-20 sm:px-14">
+      <div className="mx-auto flex max-w-[1120px] flex-col items-center text-center">
+        <span className="label-mono text-xs text-primary">Pricing</span>
+        <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-[44px]">
+          Simple pricing that scales with you
+        </h1>
+        <p className="mt-4 max-w-lg text-[17px] leading-relaxed text-muted-foreground">
+          Start free. Upgrade when you&apos;re ready to publish more. Cancel anytime.
+        </p>
 
-        <div className="grid gap-8 md:grid-cols-3">
-          {pricingPlans.map((plan, index) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              viewport={{ once: true }}
-            >
-              <Card className={`relative h-full ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}>
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge variant="default" className="flex items-center gap-1">
-                      <Star className="h-3 w-3" />
-                      Most Popular
-                    </Badge>
-                  </div>
-                )}
-                
-                <CardHeader className="text-center pb-8">
-                  <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-                  <CardDescription className="text-sm">{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground ml-1">/{plan.period}</span>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                      What&apos;s included:
-                    </h4>
-                    <ul className="space-y-2">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2">
-                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-sm">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {plan.limitations.length > 0 && (
-                    <div className="space-y-3 pt-4 border-t">
-                      <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                        Limitations:
-                      </h4>
-                      <ul className="space-y-2">
-                        {plan.limitations.map((limitation) => (
-                          <li key={limitation} className="flex items-start gap-2">
-                            <span className="text-muted-foreground text-xs mt-1">•</span>
-                            <span className="text-sm text-muted-foreground">{limitation}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </CardContent>
-
-                <CardFooter className="pt-6">
-                  <Button
-                    variant={plan.buttonVariant}
-                    className="w-full"
-                    size="lg"
-                    onClick={() => handleGetStarted(plan.name)}
-                  >
-                    {plan.buttonText}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          ))}
+        <div className="mt-7 inline-flex gap-1 rounded-xl bg-muted p-1">
+          <button
+            onClick={() => setCycle("monthly")}
+            className={cn(
+              "rounded-lg px-5 py-2 text-[13px] font-semibold transition-colors",
+              cycle === "monthly" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+            )}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setCycle("yearly")}
+            className={cn(
+              "rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors",
+              cycle === "yearly" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+            )}
+          >
+            Yearly <span className="text-primary">&minus;20%</span>
+          </button>
         </div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          viewport={{ once: true }}
-          className="text-center mt-12"
-        >
-          <p className="text-sm text-muted-foreground">
-            All plans include a 14-day free trial. No credit card required to start.
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Need a custom solution? <button className="text-primary hover:underline">Contact our sales team</button>
-          </p>
-        </motion.div>
       </div>
+
+      <div className="mx-auto mt-11 grid max-w-[1120px] items-start gap-5 lg:grid-cols-3">
+        {PLANS.map((plan) => {
+          const dark = plan.tone === "dark"
+          const featured = plan.tone === "featured"
+          return (
+            <div
+              key={plan.name}
+              className={cn(
+                "relative flex flex-col gap-6 rounded-3xl p-8",
+                dark
+                  ? "bg-[#1E1B17] text-[#E7E3DA]"
+                  : "border bg-card",
+                featured && "border-2 border-primary shadow-[0_24px_50px_-26px_hsl(var(--primary)/0.45)]",
+              )}
+            >
+              {featured && (
+                <span className="label-mono absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-3.5 py-1.5 text-[11px] tracking-wider text-primary-foreground">
+                  Most popular
+                </span>
+              )}
+
+              <div>
+                <div
+                  className={cn(
+                    "text-[15px] font-semibold",
+                    featured ? "text-primary" : dark ? "text-[#FF8A63]" : "text-foreground",
+                  )}
+                >
+                  {plan.name}
+                </div>
+                <div className="mt-4 flex items-baseline gap-1.5">
+                  <span className={cn("font-display text-[46px] font-extrabold tracking-tight", dark ? "text-[#F4F1EA]" : "text-foreground")}>
+                    {plan.price[cycle]}
+                  </span>
+                  {plan.name !== "Free" && (
+                    <span className={cn("text-[15px] font-medium", dark ? "text-[#8F897C]" : "text-muted-foreground")}>
+                      {plan.period}
+                    </span>
+                  )}
+                  {plan.name === "Free" && (
+                    <span className={cn("text-[15px] font-medium", dark ? "text-[#8F897C]" : "text-muted-foreground")}>
+                      {plan.period}
+                    </span>
+                  )}
+                </div>
+                <div className={cn("mt-2 text-sm", dark ? "text-[#A39D8F]" : "text-muted-foreground")}>{plan.tagline}</div>
+              </div>
+
+              {dark ? (
+                <Button asChild className="h-12 w-full rounded-xl bg-[#2E2A21] text-[#F4F1EA] hover:bg-[#38332A]">
+                  <a href={plan.href}>{plan.cta}</a>
+                </Button>
+              ) : (
+                <Button asChild variant={plan.variant} className="h-12 w-full rounded-xl">
+                  <Link href={plan.href}>{plan.cta}</Link>
+                </Button>
+              )}
+
+              <div className="flex flex-col gap-3.5">
+                {plan.features.map((f) => (
+                  <div
+                    key={f.label}
+                    className={cn(
+                      "flex items-center gap-3 text-sm",
+                      f.muted
+                        ? dark ? "text-[#8F897C]" : "text-muted-foreground"
+                        : dark ? "text-[#E7E3DA]" : "text-foreground/85",
+                    )}
+                  >
+                    {f.muted ? (
+                      <Droplet className="h-[15px] w-[15px] text-muted-foreground/60" />
+                    ) : (
+                      <Check className={cn("h-[15px] w-[15px]", dark ? "text-[#FF8A63]" : "text-primary")} strokeWidth={2.5} />
+                    )}
+                    {f.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <p className="mt-10 text-center text-sm text-muted-foreground">
+        All plans include word-level captions and 9:16 speaker-aware reframing.
+      </p>
     </section>
   )
-} 
+}
