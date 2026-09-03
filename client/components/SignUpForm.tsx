@@ -1,75 +1,60 @@
-import Link from "next/link";
+import Link from "next/link"
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { signup } from "@/lib/auth-action";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { signup } from "@/lib/auth-action"
+import SignInWithGoogleButton from "./SignInGoogleButton"
+import SignInWithGithubButton from "./SignInGithubButton"
 
 export function SignUpForm() {
   return (
-    <Card className="mx-auto max-w-sm">
-      <CardHeader>
-        <CardTitle className="text-xl">Sign Up</CardTitle>
-        <CardDescription>
-          Enter your information to create an account
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form action="">
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="first-name">First name</Label>
-                <Input
-                  name="first-name"
-                  id="first-name"
-                  placeholder="Max"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="last-name">Last name</Label>
-                <Input
-                  name="last-name"
-                  id="last-name"
-                  placeholder="Robinson"
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                name="email"
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input name="password" id="password" type="password" />
-            </div>
-            <Button formAction={signup} type="submit" className="w-full">
-              Create an account
-            </Button>
+    <>
+      <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Create your account</h1>
+      <p className="mt-2 text-[15px] text-muted-foreground">
+        Your first five clips are on us. No card required.
+      </p>
+
+      <form className="mt-8 flex flex-col">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <Label htmlFor="first-name" className="mb-2 text-[13px] font-semibold text-foreground">First name</Label>
+            <Input id="first-name" name="first-name" placeholder="Max" className="h-11 rounded-xl" required />
           </div>
-        </form>
-        <div className="mt-4 text-center text-sm">
-          Already have an account?{" "}
-          <Link href="/login" className="underline">
-            Sign in
-          </Link>
+          <div className="flex flex-col">
+            <Label htmlFor="last-name" className="mb-2 text-[13px] font-semibold text-foreground">Last name</Label>
+            <Input id="last-name" name="last-name" placeholder="Robinson" className="h-11 rounded-xl" required />
+          </div>
         </div>
-      </CardContent>
-    </Card>
-  );
+
+        <Label htmlFor="email" className="mb-2 mt-5 text-[13px] font-semibold text-foreground">Email</Label>
+        <Input id="email" name="email" type="email" placeholder="you@studio.com" className="h-11 rounded-xl" required />
+
+        <Label htmlFor="password" className="mb-2 mt-5 text-[13px] font-semibold text-foreground">Password</Label>
+        <Input id="password" name="password" type="password" placeholder="••••••••" className="h-11 rounded-xl" required />
+
+        <Button formAction={signup} type="submit" className="mt-6 h-12 rounded-xl text-[15px]">
+          Create account
+        </Button>
+      </form>
+
+      <div className="my-6 flex items-center gap-3.5">
+        <div className="h-px flex-1 bg-border" />
+        <span className="label-mono text-xs text-muted-foreground">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <div className="flex flex-col gap-2.5">
+        <SignInWithGoogleButton />
+        <SignInWithGithubButton />
+      </div>
+
+      <p className="mt-7 text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link href="/login" className="font-semibold text-primary hover:underline">
+          Log in
+        </Link>
+      </p>
+    </>
+  )
 }

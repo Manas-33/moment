@@ -1,11 +1,12 @@
+import { AuthShell } from "@/components/auth-shell"
 import { SignUpForm } from "@/components/SignUpForm"
 
 const SignUpPage = () => {
-    return (
-        <div className="flex h-svh items-center justify-center">
-            <SignUpForm/>
-        </div>
-    )
+  return (
+    <AuthShell>
+      <SignUpForm />
+    </AuthShell>
+  )
 }
 
 export default SignUpPage

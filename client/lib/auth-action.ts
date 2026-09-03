@@ -2,8 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 import { createClient } from "@/utils/supabase/server";
+
+async function getOrigin() {
+  const h = await headers();
+  return (
+    h.get("origin") ??
+    (h.get("host") ? `http://${h.get("host")}` : "http://localhost:3000")
+  );
+}
 
 export async function login(formData: FormData) {
   const supabase = createClient();
@@ -67,9 +76,11 @@ export async function signout() {
 
 export async function signInWithGoogle() {
   const supabase = createClient();
+  const origin = await getOrigin();
   const { data, error } = await (await supabase).auth.signInWithOAuth({
     provider: "google",
     options: {
+      redirectTo: `${origin}/auth/callback`,
       queryParams: {
         access_type: "offline",
         prompt: "consent",
@@ -87,9 +98,11 @@ export async function signInWithGoogle() {
 
 export async function signInWithGithub() {
   const supabase = createClient();
+  const origin = await getOrigin();
   const { data, error } = await (await supabase).auth.signInWithOAuth({
     provider: "github",
     options: {
+      redirectTo: `${origin}/auth/callback`,
       queryParams: {
         access_type: "offline",
         prompt: "consent",

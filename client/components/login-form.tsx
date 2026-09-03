@@ -1,71 +1,66 @@
-import { cn } from "@/lib/utils"
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { login } from "@/lib/auth-action"
 import SignInWithGoogleButton from "./SignInGoogleButton"
 import SignInWithGithubButton from "./SignInGithubButton"
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+export function LoginForm() {
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form >
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  name="email"
-                  placeholder="m@example.com"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <a
-                    href="#"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </a>
-                </div>
-                <Input id="password" type="password" name="password" required />
-              </div>
-              <Button type="submit" formAction={login} className="w-full">
-                Login
-              </Button>
-              <SignInWithGoogleButton/>
-              <SignInWithGithubButton/>
-            </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <a href="/signup" className="underline underline-offset-4">
-                Sign up
-              </a>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <>
+      <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Log in</h1>
+      <p className="mt-2 text-[15px] text-muted-foreground">
+        Welcome back. Let&apos;s make some shorts.
+      </p>
+
+      <form className="mt-8 flex flex-col">
+        <Label htmlFor="email" className="mb-2 text-[13px] font-semibold text-foreground">Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="you@studio.com"
+          className="h-11 rounded-xl"
+          required
+        />
+
+        <div className="mb-2 mt-5 flex items-center justify-between">
+          <Label htmlFor="password" className="text-[13px] font-semibold text-foreground">Password</Label>
+          <a href="#" className="text-[13px] font-medium text-primary hover:underline">Forgot?</a>
+        </div>
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          placeholder="••••••••"
+          className="h-11 rounded-xl"
+          required
+        />
+
+        <Button formAction={login} type="submit" className="mt-6 h-12 rounded-xl text-[15px]">
+          Log in
+        </Button>
+      </form>
+
+      <div className="my-6 flex items-center gap-3.5">
+        <div className="h-px flex-1 bg-border" />
+        <span className="label-mono text-xs text-muted-foreground">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <div className="flex flex-col gap-2.5">
+        <SignInWithGoogleButton />
+        <SignInWithGithubButton />
+      </div>
+
+      <p className="mt-7 text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{" "}
+        <Link href="/signup" className="font-semibold text-primary hover:underline">
+          Sign up
+        </Link>
+      </p>
+    </>
   )
 }
