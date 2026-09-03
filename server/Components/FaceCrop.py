@@ -123,8 +123,16 @@ def combine_videos(video_with_audio, video_without_audio, output_filename):
 
         combined_clip = clip_without_audio.with_audio(audio)
 
-        global Fps
-        combined_clip.write_videofile(output_filename, codec='libx264', audio_codec='aac', fps=Fps, preset='medium', bitrate='3000k')
+        # Derive fps from the source clips. The legacy `crop_to_vertical` path set
+        # a module-global `Fps`, but the current reframe path does not, which left
+        # `Fps` undefined here (NameError). Prefer the cropped clip's own fps.
+        fps = (
+            getattr(clip_without_audio, "fps", None)
+            or getattr(clip_with_audio, "fps", None)
+            or globals().get("Fps")
+            or 30
+        )
+        combined_clip.write_videofile(output_filename, codec='libx264', audio_codec='aac', fps=fps, preset='medium', bitrate='3000k')
         print(f"Combined video saved successfully as {output_filename}")
     
     except Exception as e:
