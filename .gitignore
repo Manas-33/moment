@@ -42,6 +42,10 @@ media/
 *.webm
 *.gif
 
+# README demo assets
+!/media/
+!/media/*.mp4
+
 # ML models / datasets / eval artifacts (large, regenerable)
 # NOTE: server/models/*.caffemodel + *.prototxt are REQUIRED deps (speaker detection) — keep them tracked.
 server/eval/data/

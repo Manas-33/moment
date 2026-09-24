@@ -7,6 +7,8 @@ whoever is talking, and burns in captions. It can also dub the clips into anothe
 It runs local-first. With just an Anthropic API key everything works on your machine.
 Cloudinary and Supabase are optional, for cloud storage and auth if you want them.
 
+https://github.com/user-attachments/assets/34b2ea84-b458-4eb4-ae2e-d8103bff287c
+
 ## How it works
 
 ```mermaid
